@@ -2,6 +2,7 @@ import tkinter as tk
 import turtle
 import random
 import time
+import winsound
 
 # Geometry Configuration:
 WINDOW_WIDTH = 640
@@ -30,10 +31,11 @@ class BreakoutGame:
         self.score_var = tk.StringVar(value="Score: 0")
         self.lives_var = tk.StringVar(value="Lives: 3")
         self.status_var = tk.StringVar(value="Press ← → to move. Press r to restart.")
-
-        tk.Label(game_frame, textvariable=self.score_var, font=("Arial", 12)).pack(side=tk.LEFT, padx=8)
-        tk.Label(game_frame, textvariable=self.lives_var, font=("Arial", 12)).pack(side=tk.LEFT, padx=8)
-        tk.Label(game_frame, textvariable=self.status_var, font=("Arial", 10)).pack(side=tk.RIGHT, padx=8)
+        self.sound_button = tk.Button(self.root, text="Sound: On",font=("Arial", 12), command=self.toggle_sound)
+        self.sound_button.pack(side="top", pady=5)
+        tk.Label(game_frame, textvariable=self.score_var, font=("Arial", 12)).pack(side="left", padx=8)
+        tk.Label(game_frame, textvariable=self.lives_var, font=("Arial", 12)).pack(side="left", padx=8)
+        tk.Label(game_frame, textvariable=self.status_var, font=("Arial", 10)).pack(side="right", padx=8)
 
         # Create canvas and embed turtle screen
         self.canvas = tk.Canvas(root, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
@@ -64,6 +66,7 @@ class BreakoutGame:
         self.lives = 3
         self.is_playing = True
         self.game_over = False
+        self.sound_on = True
 
         self.bricks = []
         self.create_bricks()
@@ -169,6 +172,8 @@ class BreakoutGame:
             # change x speed depending on where the ball hit the paddle
             offset = (bx - px) / (PADDLE_WIDTH/2)  # -1 .. 1
             self.ball_speed_x = BALL_SPEED * 2 * offset
+            if self.sound_on:
+                winsound.Beep(500,20)
 
     def check_brick_collisions(self):
         bx, by = self.ball.xcor(), self.ball.ycor()
@@ -178,6 +183,8 @@ class BreakoutGame:
             bw, bh = brick["w"], brick["h"]
             if (abs(bx - b.xcor()) < (bw/2 + 9)) and (abs(by - b.ycor()) < (bh/2 + 9)):
                 # ball hits the brick
+                if self.sound_on:
+                    winsound.Beep(800, 20)
                 try:
                     b.hideturtle()
                     b.clear()
@@ -230,6 +237,13 @@ class BreakoutGame:
 
     def quit_app(self, event=None):
         root.quit()
+
+    def toggle_sound(self):
+        self.sound_on = not self.sound_on
+        if self.sound_on:
+            self.sound_button.config(text="Sound: On")
+        else:
+            self.sound_button.config(text="Sound: Off")
 
 if __name__ == "__main__":
     root = tk.Tk()
