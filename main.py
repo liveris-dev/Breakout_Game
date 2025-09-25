@@ -3,14 +3,15 @@ import turtle
 import random
 import time
 
+# Geometry Configuration:
 WINDOW_WIDTH = 640
 WINDOW_HEIGHT = 720
 PADDLE_WIDTH = 100
 PADDLE_HEIGHT = 20
 PADDLE_Y = -280
-PADDLE_SPEED = 30
+PADDLE_SPEED = 35
 BALL_SPEED = 6
-BRICK_ROWS = 5
+BRICK_ROWS = 7
 BRICK_COLUMNS = 8
 BRICK_WIDTH = 70
 BRICK_HEIGHT = 24
@@ -20,8 +21,7 @@ BRICK_GAP = 6
 class BreakoutGame:
     def __init__(self, root):
         self.root = root
-        root.title("Breakout - Tkinter + Turtle")
-        root.resizable(False, False)
+        root.title("Breakout Game")
 
         # Create top frame
         game_frame = tk.Frame(root)
@@ -38,12 +38,11 @@ class BreakoutGame:
         # Create canvas and embed turtle screen
         self.canvas = tk.Canvas(root, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
         self.canvas.pack()
-
         self.screen = turtle.TurtleScreen(self.canvas)
         # Animation turn off
         self.screen.tracer(0)
 
-        # Create Turtles (paddle, ball) using "RawTurtle" to be able to attach turtles in the canvas turtlescreen
+        # Create Turtles (paddle, ball) as "RawTurtle" to be able to attach turtles in the canvas turtlescreen
         self.paddle = turtle.RawTurtle(self.screen)
         self.paddle.hideturtle()
         self.paddle.penup()
@@ -55,33 +54,31 @@ class BreakoutGame:
 
         self.ball = turtle.RawTurtle(self.screen)
         self.ball.shape("circle")
-        # self.ball.shapesize(stretch_wid=0.9, stretch_len=0.9)
         self.ball.color("red")
         self.ball.penup()
         self.ball_speed_x = BALL_SPEED * random.choice([-1, 1])
         self.ball_speed_y = BALL_SPEED
         self.reset_ball_position()
 
-        self.bricks = []
-
         self.score = 0
         self.lives = 3
         self.is_playing = True
         self.game_over = False
 
+        self.bricks = []
         self.create_bricks()
 
         root.bind("<Left>", self.move_left)
         root.bind("<Right>", self.move_right)
+        root.bind("<Motion>", self.mouse_move)
         root.bind("r", self.restart)
         root.bind("q", self.quit_app)
 
-        # start loop
         self.loop()
+
 
     def reset_ball_position(self):
         self.ball.goto(0, PADDLE_Y + 30)
-        # random initial direction
         self.ball_speed_x = BALL_SPEED * random.choice([-1, 1])
         self.ball_speed_y = BALL_SPEED
 
@@ -116,33 +113,41 @@ class BreakoutGame:
                 x += BRICK_WIDTH + BRICK_GAP
             y -= BRICK_HEIGHT + BRICK_GAP
 
-    # Paddle movement
+    # Paddle movement(keyboard and mouse)
     def move_left(self, event=None):
         new_x = self.paddle.xcor() - PADDLE_SPEED
         left_limit = -WINDOW_WIDTH / 2 + PADDLE_WIDTH / 2
         if new_x < left_limit:
             new_x = left_limit
-        # self.paddle.setx(new_x)
-        self.paddle.goto(new_x, self.paddle.ycor())
+        self.paddle.setx(new_x)
 
     def move_right(self, event=None):
         new_x = self.paddle.xcor() + PADDLE_SPEED
         right_limit = WINDOW_WIDTH / 2 - PADDLE_WIDTH / 2
         if new_x > right_limit:
             new_x = right_limit
-        # self.paddle.setx(new_x)
-        self.paddle.goto(new_x, self.paddle.ycor())
+        self.paddle.setx(new_x)
+
+    def mouse_move(self, event):
+        # Convert Tkinter x (0..window_width) to Turtle x (-window_width/2 .. +window_width/2)
+        turtle_x = event.x - self.canvas.winfo_width() // 2
+        # Move paddle (center it under the mouse)
+        self.paddle.setx(turtle_x)
+        if self.paddle.xcor() < -250:
+            self.paddle.setx(-250)
+        if self.paddle.xcor() > 250:
+            self.paddle.setx(250)
 
     # Collision
     def check_wall_collisions(self):
         x, y = self.ball.xcor(), self.ball.ycor()
-        # left / right walls
+        # side walls
         if x <= -WINDOW_WIDTH/2 + 9 or x >= WINDOW_WIDTH/2 - 9:
             self.ball_speed_x *= -1
         # top wall
         if y >= WINDOW_HEIGHT/2 - 8:
             self.ball_speed_y *= -1
-        # bottom (miss paddle)
+        # bottom wall
         if y <= -WINDOW_HEIGHT/2:
             self.lives -= 1
             self.lives_var.set(f"Lives: {self.lives}")
@@ -151,9 +156,7 @@ class BreakoutGame:
                 self.status_var.set("Game Over! Press r to restart.")
                 self.is_playing = False
             else:
-                # reset ball above paddle
                 self.reset_ball_position()
-                # pause a little
                 self.screen.update()
                 time.sleep(0.5)
 
@@ -174,18 +177,17 @@ class BreakoutGame:
             b = brick["t"]
             bw, bh = brick["w"], brick["h"]
             if (abs(bx - b.xcor()) < (bw/2 + 9)) and (abs(by - b.ycor()) < (bh/2 + 9)):
-                # hit
+                # ball hits the brick
                 try:
                     b.hideturtle()
                     b.clear()
                 except Exception:
                     pass
                 remove_list.append(brick)
-                # reflect vertical direction
                 self.ball_speed_y *= -1
                 self.score += 10
                 self.score_var.set(f"Score: {self.score}")
-                break  # handle one collision per frame
+                break
 
         for r in remove_list:
             if r in self.bricks:
@@ -208,8 +210,8 @@ class BreakoutGame:
 
             self.screen.update()
 
-        # always schedule next frame
-        self.root.after(16, self.loop)  # ~60 FPS
+        # schedule next frame after 16ms
+        self.root.after(16, self.loop)
 
     def restart(self, event=None):
         self.score = 0
